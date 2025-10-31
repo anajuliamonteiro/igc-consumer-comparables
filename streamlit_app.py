@@ -4,7 +4,6 @@ import altair as alt
 from numpy.random import default_rng as rng
 from st_supabase_connection import SupabaseConnection
 from supabase import create_client
-from gotrue.errors import AuthApiError
 from views import buyers
 
 st.set_page_config(page_title="Igc Consumer", page_icon="🧴", layout="wide", initial_sidebar_state="expanded")
