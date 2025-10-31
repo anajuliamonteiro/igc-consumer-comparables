@@ -1,6 +1,6 @@
-streamlit
-st-supabase-connection==x.x.x
+streamlit>=1.35
 pandas
 altair
 numpy
 supabase
+st-supabase-connection
