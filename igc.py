@@ -16,7 +16,13 @@ conn = st.connection("supabase",type=SupabaseConnection)
 
 @st.cache_resource
 def supabase_client():
-    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]   # must be this name
+    except KeyError as e:
+        st.error(f"Missing secret {e}. Add SUPABASE_URL and SUPABASE_KEY in app Secrets.")
+        st.stop()
+    return create_client(url, key)
 
 sb = supabase_client()
 
