@@ -1,7 +1,6 @@
 import os, streamlit as st
 import pandas as pd
 import altair as alt
-from numpy.random import default_rng as rng
 from st_supabase_connection import SupabaseConnection
 from supabase import create_client
 from views import buyers
@@ -37,14 +36,11 @@ def sign_in(email: str, password: str):
         st.session_state.logged_in = True
         st.rerun()
     except Exception as e:
-        st.error(e.message or "Sign in failed")
-
-def sign_up(email: str, password: str):
-    try:
-        sb.auth.sign_up({"email": email, "password": password})
-        st.info("Check your email to confirm, then sign in.")
-    except Exception as e:
-        st.error(e.message or "Sign up failed")
+        msg = (getattr(e, "message", None) or str(e) or "").lower()
+        if "invalid login" in msg or "credentials" in msg:
+            st.error("Email or password is incorrect — or your account hasn’t been invited yet.")
+        else:
+            st.error("Sign in failed.")
 
 def sign_out():
     sb.auth.sign_out()
@@ -57,15 +53,22 @@ def login_page():
     with st.form("login"):
         email = st.text_input("Email")
         password = st.text_input("Password", type="password")
-        go = st.form_submit_button("Sign in")
+        go = st.form_submit_button("Sign in", use_container_width=True)
         if go:
             sign_in(email, password)
 
-    with st.expander("Create an account"):
-        e2 = st.text_input("New email")
-        p2 = st.text_input("New password", type="password")
-        if st.button("Sign up"):
-            sign_up(e2, p2)
+    with st.expander("Forgot Password?"):
+        # Optional: account recovery (for existing invited users only)
+        fp_email = st.text_input("Your email", key="fp_email")
+        if st.button("Send reset email", use_container_width=True):
+            try:
+                sb.auth.reset_password_for_email(
+                    fp_email,
+                    options={"redirect_to": st.secrets.get("APP_URL", "http://localhost:8501")}
+                )
+                st.success("Reset link sent. Check your inbox.")
+            except Exception as e:
+                st.error(getattr(e, "message", None) or str(e) or "Could not send reset email.")
 
 def main():
     user = st.session_state.session.user
