@@ -36,14 +36,14 @@ def sign_in(email: str, password: str):
         st.session_state.session = res.session
         st.session_state.logged_in = True
         st.rerun()
-    except AuthApiError as e:
+    except Exception as e:
         st.error(e.message or "Sign in failed")
 
 def sign_up(email: str, password: str):
     try:
         sb.auth.sign_up({"email": email, "password": password})
         st.info("Check your email to confirm, then sign in.")
-    except AuthApiError as e:
+    except Exception as e:
         st.error(e.message or "Sign up failed")
 
 def sign_out():
@@ -76,7 +76,6 @@ def main():
         if st.button("Sign out"):
             sign_out()
 
-        # entities_with_micros 
     res_micro = conn.table("entities_context").select("*").execute()
     df_micro = pd.DataFrame(res_micro.data or [])
 
