@@ -18,7 +18,7 @@ conn = st.connection("supabase",type=SupabaseConnection)
 def supabase_client():
     try:
         url = st.secrets["SUPABASE_URL"]
-        key = st.secrets["SUPABASE_KEY"]   # must be this name
+        key = st.secrets["SUPABASE_KEY"]
     except KeyError as e:
         st.error(f"Missing secret {e}. Add SUPABASE_URL and SUPABASE_KEY in app Secrets.")
         st.stop()
