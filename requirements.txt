@@ -1,2 +1,6 @@
 streamlit
 st-supabase-connection==x.x.x
+pandas
+altair
+numpy
+supabase
