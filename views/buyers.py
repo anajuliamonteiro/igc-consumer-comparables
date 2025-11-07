@@ -3,6 +3,8 @@ import pandas as pd
 
 def render(df_buyers, df_macro_labels, df_micro_labels, conn):
 
+    #Test
+
     df_buyers_display = df_buyers[["id", "mi_key", "entity", "website", "ticker", "macros", "micros", "country", "description", "ciq_industry", "ciq_industry_category"]]
     
     macro_labels = df_macro_labels["label"].dropna().astype(str).tolist()
