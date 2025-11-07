@@ -110,152 +110,152 @@ def main():
     # --------------
 
     st.title("Igc Consumer & Retail")
-    tab1, tab2, tab3, tab4 = st.tabs(["Buyers", "Adding Records", "Database Entities", "Trading [Undone]"])
+    tab1, tab2 = st.tabs(["Strategic Buyers", "Projects"])
     # --------------
 
-    with tab4: 
-        col = st.columns((6.5, 1.5), gap='medium')
+    # with tab4: 
+    #     col = st.columns((6.5, 1.5), gap='medium')
 
-        with col [0]:
-            st.badge("19-09-2025", color="green")    
-            entities = st.dataframe(
-                df_micro[["entity", "website", "description", "ticker", "country", "city", "micros", "ciq_industry", "ciq_industry_category"]],
-                key="entities",
-                on_select="rerun",
-                selection_mode=["multi-row", "multi-column"],
-                column_config={
-                    "website": st.column_config.LinkColumn(
-                        "Website",
-                    ),
-                    "micros": st.column_config.ListColumn(
-                        "Micros",
-                        help="Example",
-                        width="medium",
-                    ),
-                    "ciq_industry": st.column_config.ListColumn(
-                        "CIQ Main Industry",
-                        help="Example",
-                        width="medium",
-                    ),
-                    "ciq_industry_category": st.column_config.ListColumn(
-                        "CIQ Industries",
-                        help="Example",
-                        width="medium",
-                    ),
-                },
-                hide_index=True,
-            )
+    #     with col [0]:
+    #         st.badge("19-09-2025", color="green")    
+    #         entities = st.dataframe(
+    #             df_micro[["entity", "website", "description", "ticker", "country", "city", "micros", "ciq_industry", "ciq_industry_category"]],
+    #             key="entities",
+    #             on_select="rerun",
+    #             selection_mode=["multi-row", "multi-column"],
+    #             column_config={
+    #                 "website": st.column_config.LinkColumn(
+    #                     "Website",
+    #                 ),
+    #                 "micros": st.column_config.ListColumn(
+    #                     "Micros",
+    #                     help="Example",
+    #                     width="medium",
+    #                 ),
+    #                 "ciq_industry": st.column_config.ListColumn(
+    #                     "CIQ Main Industry",
+    #                     help="Example",
+    #                     width="medium",
+    #                 ),
+    #                 "ciq_industry_category": st.column_config.ListColumn(
+    #                     "CIQ Industries",
+    #                     help="Example",
+    #                     width="medium",
+    #                 ),
+    #             },
+    #             hide_index=True,
+    #         )
 
-    with tab3: 
-        col_tab2 = st.columns((6.5, 1.5), gap='medium')
+    # with tab3: 
+    #     col_tab2 = st.columns((6.5, 1.5), gap='medium')
 
-        with col_tab2[1]:
-                options = st.multiselect(
-                    " ",
-                    ["Wellness", "Beauty", "Education", "Food", "Statiorary"],
-                )
+    #     with col_tab2[1]:
+    #             options = st.multiselect(
+    #                 " ",
+    #                 ["Wellness", "Beauty", "Education", "Food", "Statiorary"],
+    #             )
 
-        df_display = df_micro.drop(columns=[
-                "id", "mi_key"
-            ])
+    #     df_display = df_micro.drop(columns=[
+    #             "id", "mi_key"
+    #         ])
 
-        with col_tab2[0]: 
-            st.badge("19-09-2025", color="green")
+    #     with col_tab2[0]: 
+    #         st.badge("19-09-2025", color="green")
 
-            col_trading = st.columns((1, 1, 1, 1), gap='medium')
+    #         col_trading = st.columns((1, 1, 1, 1), gap='medium')
 
-            median_ev_rev = df_display["EV_Revenue_LTM"].median()
-            median_ev_ebitda = df_display["EV_EBITDA_LTM"].median()
-            median_ev_rev_fwd = df_display["EV_Revenue_FWD"].median()
-            median_ev_ebitda_fwd = df_display["EV_EBITDA_FWD"].median()
+    #         median_ev_rev = df_display["EV_Revenue_LTM"].median()
+    #         median_ev_ebitda = df_display["EV_EBITDA_LTM"].median()
+    #         median_ev_rev_fwd = df_display["EV_Revenue_FWD"].median()
+    #         median_ev_ebitda_fwd = df_display["EV_EBITDA_FWD"].median()
         
-            with col_trading[0]:
-                st.metric(label="**EV/Revenue (LTM)**", value=f"{median_ev_rev:,.2f}x", border=True, delta=0)
+    #         with col_trading[0]:
+    #             st.metric(label="**EV/Revenue (LTM)**", value=f"{median_ev_rev:,.2f}x", border=True, delta=0)
 
-            with col_trading[1]:
-                st.metric(label="**EV/EBITDA (LTM)**", value=f"{median_ev_ebitda:,.2f}x", delta=0, border=True)
+    #         with col_trading[1]:
+    #             st.metric(label="**EV/EBITDA (LTM)**", value=f"{median_ev_ebitda:,.2f}x", delta=0, border=True)
             
-            with col_trading[2]:
-                st.metric(label="EV/Revenue (FWD)", value=f"{median_ev_rev_fwd:,.2f}x", delta=0, border=True)
+    #         with col_trading[2]:
+    #             st.metric(label="EV/Revenue (FWD)", value=f"{median_ev_rev_fwd:,.2f}x", delta=0, border=True)
 
-            with col_trading[3]:
-                st.metric(label="EV/EBITDA (FWD)", value=f"{median_ev_ebitda_fwd:,.2f}x", delta=0, border=True)
+    #         with col_trading[3]:
+    #             st.metric(label="EV/EBITDA (FWD)", value=f"{median_ev_ebitda_fwd:,.2f}x", delta=0, border=True)
 
-            trading = st.dataframe(
-                df_display[[
-                    "entity", "website", "ticker", "micros", "country", "description", "ciq_industry", "ciq_industry_category",
-                    "EV_Revenue_LTM", "EV_Revenue_FWD", "Revenue_LTM",
-                    "EV_EBITDA_LTM", "EV_EBITDA_FWD", "EBITDA_LTM", "EBITDA_Margin_LTM",
-                    "Beta_5Y", "Enterprise_Value", "Market_Cap",
-                    "CAGR_Revenue_5Y", "CAGR_Revenue_3Y",
-                    "Gross_Profit_LTM", "Gross_Margin_LTM",
-                    "CAGR_EBITDA_5Y", "CAGR_EBITDA_3Y",
-                    "Net_Working_Capital", "Net_Working_Capital_Revenue",
-                    "Average_Days_Inventory_Out_LTM", "Average_Days_Sales",
-                    "price_change"
-                ]],
-                key="trading_",
-                on_select="rerun",
-                selection_mode=["multi-row", "multi-column"],
-                column_config={
-                    "website": st.column_config.LinkColumn(
-                        "Website",
-                    ),
-                    "micros": st.column_config.ListColumn(
-                        "Micros",
-                        help="Example",
-                        width="medium",
-                    ),
-                    "ciq_industry": st.column_config.ListColumn(
-                        "CIQ Main Industry",
-                        help="Example",
-                        width="medium",
-                    ),
-                    "ciq_industry_category": st.column_config.ListColumn(
-                        "CIQ Industries",
-                        help="Example",
-                        width="medium",
-                    ),
-                    "country": st.column_config.ListColumn(
-                        "Country",
-                        help="Example",
-                    ),
-                },
-                hide_index=True,
-            )
+    #         trading = st.dataframe(
+    #             df_display[[
+    #                 "entity", "website", "ticker", "micros", "country", "description", "ciq_industry", "ciq_industry_category",
+    #                 "EV_Revenue_LTM", "EV_Revenue_FWD", "Revenue_LTM",
+    #                 "EV_EBITDA_LTM", "EV_EBITDA_FWD", "EBITDA_LTM", "EBITDA_Margin_LTM",
+    #                 "Beta_5Y", "Enterprise_Value", "Market_Cap",
+    #                 "CAGR_Revenue_5Y", "CAGR_Revenue_3Y",
+    #                 "Gross_Profit_LTM", "Gross_Margin_LTM",
+    #                 "CAGR_EBITDA_5Y", "CAGR_EBITDA_3Y",
+    #                 "Net_Working_Capital", "Net_Working_Capital_Revenue",
+    #                 "Average_Days_Inventory_Out_LTM", "Average_Days_Sales",
+    #                 "price_change"
+    #             ]],
+    #             key="trading_",
+    #             on_select="rerun",
+    #             selection_mode=["multi-row", "multi-column"],
+    #             column_config={
+    #                 "website": st.column_config.LinkColumn(
+    #                     "Website",
+    #                 ),
+    #                 "micros": st.column_config.ListColumn(
+    #                     "Micros",
+    #                     help="Example",
+    #                     width="medium",
+    #                 ),
+    #                 "ciq_industry": st.column_config.ListColumn(
+    #                     "CIQ Main Industry",
+    #                     help="Example",
+    #                     width="medium",
+    #                 ),
+    #                 "ciq_industry_category": st.column_config.ListColumn(
+    #                     "CIQ Industries",
+    #                     help="Example",
+    #                     width="medium",
+    #                 ),
+    #                 "country": st.column_config.ListColumn(
+    #                     "Country",
+    #                     help="Example",
+    #                 ),
+    #             },
+    #             hide_index=True,
+    #         )
 
-        with tab2:
-            cols = st.columns((1.5, 4.5, 2), gap='medium')
-            with cols[1]:
-                with st.form("add_entity"):
-                    entity = st.text_input("Entity name")
-                    website = st.text_input("Website")
-                    description = st.text_area("Description")
-                    mi_key = st.number_input("MI Key", step=1)
-                    ticker = st.text_input("Ticker", value="Private")
-                    country = st.text_input("Country")
-                    city = st.text_input("City")
-                    industry = st.text_input("Industry")
-                    all_industries = st.text_input("All Industries")
-                    submitted = st.form_submit_button("Add Entity")
+    # with tab2:
+    #     cols = st.columns((1.5, 4.5, 2), gap='medium')
+    #     with cols[1]:
+    #         with st.form("add_entity"):
+    #             entity = st.text_input("Entity name")
+    #             website = st.text_input("Website")
+    #             description = st.text_area("Description")
+    #             mi_key = st.number_input("MI Key", step=1)
+    #             ticker = st.text_input("Ticker", value="Private")
+    #             country = st.text_input("Country")
+    #             city = st.text_input("City")
+    #             industry = st.text_input("Industry")
+    #             all_industries = st.text_input("All Industries")
+    #             submitted = st.form_submit_button("Add Entity")
 
-                    if submitted:
-                        data = {
-                            "entity": entity,
-                            "website": website,
-                            "description": description,
-                            "mi_key": int(mi_key),
-                            "ticker": ticker,
-                            "country": country,
-                            "city": city,
-                            "industry": industry,
-                            "all_industries": all_industries,
-                        }
+    #             if submitted:
+    #                 data = {
+    #                     "entity": entity,
+    #                     "website": website,
+    #                     "description": description,
+    #                     "mi_key": int(mi_key),
+    #                     "ticker": ticker,
+    #                     "country": country,
+    #                     "city": city,
+    #                     "industry": industry,
+    #                     "all_industries": all_industries,
+    #                 }
 
-                        response = conn.table("entities").insert(data).execute()
+    #                 response = conn.table("entities").insert(data).execute()
 
-        with tab1:
-            buyers.render(df_buyers, df_macro_labels, df_micro_labels)
+    with tab1:
+        buyers.render(df_buyers, df_macro_labels, df_micro_labels, conn)
 
     # event.selection
 
