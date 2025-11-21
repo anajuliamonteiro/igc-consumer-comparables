@@ -29,6 +29,7 @@ if "session" not in st.session_state:
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = bool(st.session_state.session and st.session_state.session.user)
 
+@st.cache_data
 def sign_in(email: str, password: str):
     try:
         res = sb.auth.sign_in_with_password({"email": email, "password": password})
@@ -42,11 +43,13 @@ def sign_in(email: str, password: str):
         else:
             st.error("Sign in failed.")
 
+@st.cache_data
 def sign_out():
     sb.auth.sign_out()
     st.session_state.session = None
     st.session_state.logged_in = False
     st.rerun()
+
 
 def login_page():
     st.title("Login")

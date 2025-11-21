@@ -1,24 +1,28 @@
 import streamlit as st
 import pandas as pd
+import import_entities
 
 def render(df_buyers, df_macro_labels, df_micro_labels, conn):
 
-    #Test
-
     df_buyers_display = df_buyers[["id", "mi_key", "entity", "website", "ticker", "macros", "micros", "country", "description", "ciq_industry", "ciq_industry_category"]]
     
-    macro_labels = df_macro_labels["label"].dropna().astype(str).tolist()
-    micro_labels = df_micro_labels["label"].dropna().astype(str).tolist()
-    countries_labels = df_buyers["country"].dropna().unique().astype(str).tolist()
-    industries_labels = sorted(pd.Series(df_buyers["ciq_industry_category"]).dropna().apply(lambda x: x if isinstance(x, list) else [x]).explode().astype(str).str.strip().replace({"", "nan", "none", "null"}, pd.NA).dropna().drop_duplicates().tolist())
-    industry_labels = sorted(pd.Series(df_buyers["ciq_industry"]).dropna().apply(lambda x: x if isinstance(x, list) else [x]).explode().astype(str).str.strip().replace({"", "nan", "none", "null"}, pd.NA).dropna().drop_duplicates().tolist())
+    
+    @st.cache_data(ttl=300)
+    def _labels(macro_df, micro_df, df_buyers):
+        return (
+            macro_df["label"].dropna().astype(str).tolist(),
+            micro_df["label"].dropna().astype(str).tolist(),
+            df_buyers["country"].dropna().unique().astype(str).tolist(),
+            sorted(pd.Series(df_buyers["ciq_industry_category"]).dropna().apply(lambda x: x if isinstance(x, list) else [x]).explode().astype(str).str.strip().replace({"", "nan", "none", "null"}, pd.NA).dropna().drop_duplicates().tolist()),
+            sorted(pd.Series(df_buyers["ciq_industry"]).dropna().apply(lambda x: x if isinstance(x, list) else [x]).explode().astype(str).str.strip().replace({"", "nan", "none", "null"}, pd.NA).dropna().drop_duplicates().tolist()),
+        )
+    macro_labels, micro_labels, countries_labels, industries_labels, industry_labels = _labels(df_macro_labels, df_micro_labels, df_buyers)
+    
     
     col_filter = st.columns((1, 1, 1, 1, 1, 1), gap='medium')
-    with col_filter[1]:
-        macros = st.multiselect("Macro", macro_labels)
+    with col_filter[1]: macros = st.multiselect("Macro", macro_labels)
 
-    with col_filter[2]:
-        micros = st.multiselect("Micro", micro_labels)
+    with col_filter[2]: micros = st.multiselect("Micro", micro_labels)
 
     with col_filter[3]:
         countries = st.multiselect("Country", countries_labels)
@@ -30,7 +34,7 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
         industries = st.multiselect("Industries", industries_labels)
 
     with col_filter[0]: 
-        selection = st.segmented_control("Buyers' Database", ['View','Edit'], label_visibility="hidden", selection_mode="single", default='View')
+        selection = st.segmented_control("Buyers' Database", ['View','Edit'], label_visibility="hidden", selection_mode="single", default='Edit')
 
 
     to_set = lambda v: (set(map(lambda x: str(x).strip(), v)) if isinstance(v, list)
@@ -197,5 +201,7 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
                     st.error(getattr(e, "message", None) or str(e) or "Fast sync failed.")
 
 
-    uploaded_file = st.file_uploader("Upload Buyers")
+    cols = st.columns((1, 1), gap='medium')
+    with cols[0]:   
+        import_entities.buyers_file(conn)
     
