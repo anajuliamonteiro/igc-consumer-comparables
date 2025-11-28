@@ -148,7 +148,7 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
         ),
         "intel_date": st.column_config.DateColumn(
             "Intel Date",
-            width="medium",  # bigger; use "large" or "300px" if you want
+            width="medium",  # adjust as needed
             format="YYYY-MM-DD",
         ),
         "ciq_industry": st.column_config.ListColumn(
@@ -232,6 +232,8 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
 
             if changed_since_last and (now - last_ts) > 1.0:  # adjust window if needed
                 try:
+                    from itertools import chain
+
                     # 1) Collect ALL labels used across changed buyers
                     prev = st.session_state.get("last_synced_micros", {})
                     changed_ids = [
@@ -348,12 +350,13 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
                         or "Fast sync failed."
                     )
 
+    st.caption(f"Entities shown: {len(df_view)}")
     # ----------------- BOTTOM ROW: FILE + INTEL PANEL -----------------
     cols = st.columns((1, 1), gap="medium")
     with cols[0]:
         import_entities.buyers_file(conn)
 
-    # Intel date/text for a SPECIFIC selected entity (company)
+    # Intel + micros for a SPECIFIC selected entity (company)
     with cols[1]:
         selected_row = None
         selected_entity = None
@@ -376,11 +379,32 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
 
         # IMPORTANT: avoid ambiguous truth value for Series
         if selected_row is None:
-            st.info("Select a single company in the **View** table to add or edit intel.")
+            st.info("Select a single company in the **View** table to add or edit intel and micros.")
         else:
             # current intel values
             current_intel = selected_row.get("intel", "") if "intel" in selected_row else ""
             current_intel_date = selected_row.get("intel_date", None) if "intel_date" in selected_row else None
+
+            # current micros (ensure list of strings)
+            def _as_list_for_micros(x):
+                if isinstance(x, list):
+                    return [str(v).strip() for v in x if str(v).strip()]
+                if x is None:
+                    return []
+                s = str(x).strip()
+                if not s:
+                    return []
+                if s.startswith("[") and s.endswith("]"):
+                    return [
+                        t.strip(" '\"")
+                        for t in s.strip("[]").split(",")
+                        if t.strip()
+                    ]
+                return [t.strip() for t in s.split(",") if t.strip()]
+
+            current_micros = []
+            if "micros" in selected_row:
+                current_micros = _as_list_for_micros(selected_row["micros"])
 
             # normalize date for the widget:
             # - if it's a Timestamp, convert to date
@@ -391,7 +415,7 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
             if pd.isna(current_intel_date):
                 current_intel_date = datetime.date.today()
 
-            st.badge(f"Intel for: {selected_entity or 'Selected Company'}")
+            st.badge(f"{selected_entity}")
 
             with st.form("intel_form"):
                 intel_date = st.date_input(
@@ -404,41 +428,116 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
                     value=current_intel or "",
                     key="intel_text",
                 )
+                micros_selected = st.multiselect(
+                    "Micros",
+                    options=micro_labels,
+                    default=current_micros,
+                    key="intel_micros",
+                    help="Assign / edit micros for this entity",
+                )
+
                 col_btns = st.columns(5)
                 with col_btns[0]:
-                    save_clicked = st.form_submit_button("Save intel")
+                    save_clicked = st.form_submit_button("Save")
                 with col_btns[1]:
-                    clear_clicked = st.form_submit_button("Clear intel")
+                    clear_clicked = st.form_submit_button("Clear")
 
             entity_id = selected_row["id"]
 
-            # SAVE flow
+            # SAVE flow (intel + micros)
             if save_clicked:
                 if not intel_date or not intel_text.strip():
                     st.warning("Please provide both an intel date and some text, or use 'Clear intel' to remove it.")
                 else:
                     try:
+                        # 1) Save intel on entities
                         conn.table("entities").update(
                             {
                                 "intel_date": str(intel_date),
                                 "intel": intel_text.strip(),
                             }
                         ).eq("id", entity_id).execute()
-                        st.success("Intel saved.")
+
+                        # 2) Sync micros for this single entity
+                        #    a) Upsert all selected micro labels
+                        labels_needed = sorted({lab for lab in micros_selected if lab})
+                        if labels_needed:
+                            conn.table("micros").upsert(
+                                [{"label": l} for l in labels_needed],
+                                on_conflict="label",
+                            ).execute()
+
+                            # b) Fetch their IDs
+                            micro_rows = (
+                                conn.table("micros")
+                                .select("id,label")
+                                .in_("label", labels_needed)
+                                .execute()
+                                .data
+                                or []
+                            )
+                            label_to_id = {r["label"]: r["id"] for r in micro_rows}
+
+                            # c) Fetch existing links for this entity
+                            links = (
+                                conn.table("buyer_micro_context")
+                                .select("entity_id,micro_id")
+                                .eq("entity_id", str(entity_id))
+                                .execute()
+                                .data
+                                or []
+                            )
+                            current_ids = {r["micro_id"] for r in links}
+
+                            desired_ids = {
+                                label_to_id[l]
+                                for l in micros_selected
+                                if l in label_to_id
+                            }
+
+                            add_ids = desired_ids - current_ids
+                            del_ids = current_ids - desired_ids
+
+                            # d) Insert new links
+                            if add_ids:
+                                to_insert = [
+                                    {"entity_id": str(entity_id), "micro_id": mid}
+                                    for mid in add_ids
+                                ]
+                                conn.table("buyer_micro_context").insert(
+                                    to_insert
+                                ).execute()
+
+                            # e) Delete removed links
+                            if del_ids:
+                                conn.table("buyer_micro_context") \
+                                    .delete() \
+                                    .eq("entity_id", str(entity_id)) \
+                                    .in_("micro_id", list(del_ids)) \
+                                    .execute()
+                        else:
+                            # If no micros selected, remove all existing for this entity
+                            conn.table("buyer_micro_context") \
+                                .delete() \
+                                .eq("entity_id", str(entity_id)) \
+                                .execute()
+
+                        st.success("Saved.")
                     except Exception as e:
                         st.error(
-                            "Could not save intel to the database. Showing captured data below."
+                            "Could not save intel/micros to the database. Showing captured data below."
                         )
                         st.write(
                             {
                                 "entity_id": entity_id,
                                 "intel_date": intel_date,
                                 "intel_text": intel_text.strip(),
+                                "micros_selected": micros_selected,
                                 "error": str(e),
                             }
                         )
 
-            # CLEAR flow
+            # CLEAR flow (intel only, micros untouched)
             if clear_clicked:
                 try:
                     conn.table("entities").update(
@@ -447,7 +546,7 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
                             "intel": None,
                         }
                     ).eq("id", entity_id).execute()
-                    st.success("Intel cleared.")
+                    st.success("Intel cleared (micros unchanged).")
                 except Exception as e:
                     st.error(
                         "Could not clear intel in the database. Showing captured data below."
