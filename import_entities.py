@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from io import BytesIO
 
 def chunk_list(lst, size):
     for i in range(0, len(lst), size):
@@ -15,19 +16,29 @@ def buyers_file(conn):
     if not uploaded_file:
         return
 
-    # --- 1) Read file ---
+    # --- 1) Read file ONCE ---
+    name = uploaded_file.name.lower()
+    raw = uploaded_file.read()
+
     try:
-        name = uploaded_file.name.lower()
-        if name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file)
+        if name.endswith((".xlsx", ".xls", ".xlsm")):
+            # 👇 THIS is the important part
+            df = pd.read_excel(BytesIO(raw), sheet_name="ciq", header=0)
         else:
-            df = pd.read_excel(uploaded_file)
+            try:
+                df = pd.read_csv(BytesIO(raw), encoding="utf-8-sig")
+            except UnicodeDecodeError:
+                df = pd.read_csv(BytesIO(raw), encoding="latin1")
     except Exception as e:
         st.error(f"Could not read file: {e}")
         return
 
-    # Normalize column names
+    st.write("Columns as seen by pandas (raw):", df.columns.tolist())
+    st.dataframe(df.head())
+
+    # --- 2) Normalize column names ---
     df.columns = [str(c).strip().lower() for c in df.columns]
+    st.write("Normalized columns:", df.columns.tolist())
 
     required_cols = ["entity", "mi_key", "ticker"]
     missing = [c for c in required_cols if c not in df.columns]
@@ -38,8 +49,8 @@ def buyers_file(conn):
     st.write("Preview of uploaded data:")
     st.dataframe(df.head())
 
+    # --- 3) Import button ---
     if st.button("Import into Supabase", type="primary", use_container_width=True):
-        # --- 2) Build rows list ---
         rows = []
         for _, r in df.iterrows():
             entity = str(r["entity"]).strip() if pd.notna(r["entity"]) else None
@@ -74,21 +85,11 @@ def buyers_file(conn):
             st.warning("No valid rows to insert.")
             return
 
-        # --- 3) Deduplicate by mi_key (and optionally other keys) ---
-        # Keep the last occurrence of each mi_key in the file
-        df_rows = pd.DataFrame(rows)
-
-        # Optional: also require (mi_key, entity, ticker) to be unique together
-        # df_rows = df_rows.drop_duplicates(subset=["mi_key", "entity", "ticker"], keep="last")
-
-        # Minimum: unique by mi_key
-        df_rows = df_rows.drop_duplicates(subset=["mi_key"], keep="last")
-
+        df_rows = pd.DataFrame(rows).drop_duplicates(subset=["mi_key"], keep="last")
         rows = df_rows.to_dict(orient="records")
 
         st.write("Number of rows after deduplication:", len(rows))
 
-        # --- 4) Insert in chunks with upsert ---
         errors = []
         inserted_total = 0
 
@@ -109,4 +110,6 @@ def buyers_file(conn):
             for e in errors:
                 st.write(f"- {e}")
         else:
-            st.success(f"Successfully imported (inserted/updated) {inserted_total} entities.")
+            st.success(
+                f"Successfully imported (inserted/updated) {inserted_total} entities."
+            )

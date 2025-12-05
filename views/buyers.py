@@ -82,7 +82,7 @@ def render(df_buyers, df_macro_labels, df_micro_labels, conn):
             ["View", "Edit"],
             label_visibility="hidden",
             selection_mode="single",
-            default="Edit",
+            default="View",
         )
 
     to_set = (
